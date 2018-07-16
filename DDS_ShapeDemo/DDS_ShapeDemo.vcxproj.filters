@@ -1,0 +1,120 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="DDS_IDL">
+      <UniqueIdentifier>{3c6d562a-fcdb-44f2-b7ea-165a583a6b66}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="DDS_ShapeDemo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DDS_ShapeDemoDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DDS_IDL\ShapeInfoC.h">
+      <Filter>DDS_IDL</Filter>
+    </ClInclude>
+    <ClInclude Include="DDS_IDL\ShapeInfoS.h">
+      <Filter>DDS_IDL</Filter>
+    </ClInclude>
+    <ClInclude Include="DDS_IDL\ShapeInfoTypeSupportC.h">
+      <Filter>DDS_IDL</Filter>
+    </ClInclude>
+    <ClInclude Include="DDS_IDL\ShapeInfoTypeSupportImpl.h">
+      <Filter>DDS_IDL</Filter>
+    </ClInclude>
+    <ClInclude Include="DDS_IDL\ShapeInfoTypeSupportS.h">
+      <Filter>DDS_IDL</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgSetting.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DataReaderListenerImpl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="DDS_ShapeDemo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DDS_ShapeDemoDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Common.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DDS_IDL\ShapeInfoC.cpp">
+      <Filter>DDS_IDL</Filter>
+    </ClCompile>
+    <ClCompile Include="DDS_IDL\ShapeInfoS.cpp">
+      <Filter>DDS_IDL</Filter>
+    </ClCompile>
+    <ClCompile Include="DDS_IDL\ShapeInfoTypeSupportC.cpp">
+      <Filter>DDS_IDL</Filter>
+    </ClCompile>
+    <ClCompile Include="DDS_IDL\ShapeInfoTypeSupportImpl.cpp">
+      <Filter>DDS_IDL</Filter>
+    </ClCompile>
+    <ClCompile Include="DDS_IDL\ShapeInfoTypeSupportS.cpp">
+      <Filter>DDS_IDL</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgSetting.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DataReaderListenerImpl.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="DDS_ShapeDemo.rc">
+      <Filter>资源文件</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\DDS_ShapeDemo.rc2">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="DDS_IDL\ShapeInfoC.inl">
+      <Filter>DDS_IDL</Filter>
+    </None>
+    <None Include="DDS_IDL\ShapeInfoTypeSupportC.inl">
+      <Filter>DDS_IDL</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\DDS_ShapeDemo.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,15 @@
+module ShapeDemo
+{
+	#pragma DCPS_DATA_TYPE "ShapeDemo::ShapeInfo"
+	struct ShapeInfo
+	{
+		string	shapeType;
+		long	id;
+		long	posX;
+		long	posY;
+		long	directionX;
+		long	directionY;
+		long	color;
+		long	size;
+	};
+};
