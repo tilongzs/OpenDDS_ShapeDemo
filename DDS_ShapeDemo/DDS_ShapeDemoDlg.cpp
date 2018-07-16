@@ -241,7 +241,7 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 			CString log;
 			// 创建主题
 			CORBA::String_var type_name = _shapeInfo_TS->get_type_name();
-			Topic_var dataA_leftTopic = _participant->create_topic(sampleShape->shapeType,
+			Topic_var dataA_leftTopic = _participant->create_topic(CStringA(sampleShape->shapeType),
 				type_name,
 				TOPIC_QOS_DEFAULT,
 				0,
@@ -270,7 +270,7 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 
 			// 创建写数据工具
 			DDS::DataWriter_var writer =
-				publisher->create_datawriter(dataA_leftTopic,
+					publisher->create_datawriter(dataA_leftTopic,
 					dataWriterQos, // DATAWRITER_QOS_DEFAULT
 					nullptr,
 					OpenDDS::DCPS::DEFAULT_STATUS_MASK);
@@ -414,7 +414,7 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 			// 创建主题
 			CORBA::String_var type_name = _shapeInfo_TS->get_type_name();
 			DDS::Topic_var topic =
-				_participant->create_topic(shapeInfo->shapeType,
+					_participant->create_topic(CStringA(shapeInfo->shapeType),
 					type_name,
 					TOPIC_QOS_DEFAULT,
 					0,
