@@ -458,15 +458,17 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 				strFilter.Format("shapeType='%s' and color=%d", shapeInfo->shapeType, shapeInfo->color);
 			}
 
+			static int filterIndex = 1;
+			CStringA filterName;
+			filterName.Format("filter%d", filterIndex++);
 			DDS::ContentFilteredTopic_var cft =
-				_participant->create_contentfilteredtopic("带过滤条件的订阅",
+				_participant->create_contentfilteredtopic(filterName,
 					topic,
 					strFilter,
 					StringSeq());
 
 			DDS::DataReader_var reader = subscriber->create_datareader(cft,
-		//	DDS::DataReader_var reader = subscriber->create_datareader(topic,
-				dataReaderQos,// DATAREADER_QOS_DEFAULT
+				dataReaderQos,
 				dataReaderListener,
 				OpenDDS::DCPS::DEFAULT_STATUS_MASK);
 
@@ -474,12 +476,6 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 			{
 				AppendMSG(L"创建读监听器失败");
 				return;
-			}
-
-			ShapeDemo::ShapeInfoDataReader_var reader_i = ShapeDemo::ShapeInfoDataReader::_narrow(reader);
-			if (!reader_i)
-			{
-				ASSERT(0);
 			}
 
 			while (!token.is_canceled())

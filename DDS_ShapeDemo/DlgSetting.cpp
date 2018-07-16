@@ -54,6 +54,15 @@ BOOL CDlgSetting::OnInitDialog()
 		_editSize.EnableWindow(FALSE);
 	}
 
+	if (_isPublish)
+	{
+		SetWindowText(L"∑¢≤º≈‰÷√");
+	}
+	else
+	{
+		SetWindowText(L"∂©‘ƒ≈‰÷√");
+	}
+
 	return TRUE;
 }
 
