@@ -238,91 +238,39 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 		auto token = taskData->cts->get_token();
 		taskData->task = make_shared<task<void>>([&, token, sampleShape, sampleData]
 		{
-// 			CString log;
-// 			// 创建主题
-// 			CORBA::String_var type_name = _shapeInfo_TS->get_type_name();
-// 			Topic_var dataA_leftTopic = _participant->create_topic(CStringA("test topic Left"),
-// 				type_name,
-// 				TOPIC_QOS_DEFAULT,
-// 				0,
-// 				OpenDDS::DCPS::DEFAULT_STATUS_MASK);
-// 			if (!dataA_leftTopic)
-// 			{
-// 				AppendMSG(L"创建主题失败");
-// 				return;
-// 			}
-// 
-// 			// 创建发布者
-// 			Publisher_var publisher = _participant->create_publisher(PUBLISHER_QOS_DEFAULT, 0, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
-// 			if (!publisher)
-// 			{
-// 				AppendMSG(L"创建发布者失败");
-// 				return;
-// 			}
-// 
-// 			DataWriterQos dataWriterQos;
-// 			publisher->get_default_datawriter_qos(dataWriterQos);
-// 			dataWriterQos.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
-// 			DDS::Duration_t livelinessTime = { 1, 0 };
-// 			dataWriterQos.liveliness.lease_duration = livelinessTime;
-// 			dataWriterQos.history.kind = KEEP_LAST_HISTORY_QOS;
-// 			dataWriterQos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
-// 
-// 			// 创建写数据工具
-// 			DDS::DataWriter_var writer =
-// 					publisher->create_datawriter(dataA_leftTopic,
-// 					dataWriterQos, // DATAWRITER_QOS_DEFAULT
-// 					nullptr,
-// 					OpenDDS::DCPS::DEFAULT_STATUS_MASK);
-// 
-// 			if (!writer)
-// 			{
-// 				AppendMSG(L"创建写数据工具失败");
-// 				return;
-// 			}
-// 
-// 			ShapeInfoDataWriter_var message_writer = ShapeInfoDataWriter::_narrow(writer);
-// 			if (!message_writer)
-// 			{
-// 				ASSERT(0);
-// 			}
-
 			CString log;
 			// 创建主题
 			CORBA::String_var type_name = _shapeInfo_TS->get_type_name();
-			Topic_var dataA_leftTopic = _participant->create_topic(CStringA("test topic Left"),
+			Topic_var topic = _participant->create_topic(sampleShape->shapeType,
 				type_name,
 				TOPIC_QOS_DEFAULT,
 				0,
 				OpenDDS::DCPS::DEFAULT_STATUS_MASK);
-
-			if (!dataA_leftTopic)
+			if (!topic)
 			{
 				AppendMSG(L"创建主题失败");
 				return;
 			}
 
 			// 创建发布者
-			Publisher_var dataA_leftTopicPublisher = _participant->create_publisher(PUBLISHER_QOS_DEFAULT,
-				0,
-				OpenDDS::DCPS::DEFAULT_STATUS_MASK);
-
-			if (!dataA_leftTopicPublisher)
+			Publisher_var publisher = _participant->create_publisher(PUBLISHER_QOS_DEFAULT, 0, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
+			if (!publisher)
 			{
 				AppendMSG(L"创建发布者失败");
 				return;
 			}
 
 			DataWriterQos dataWriterQos;
-			dataA_leftTopicPublisher->get_default_datawriter_qos(dataWriterQos);
+			publisher->get_default_datawriter_qos(dataWriterQos);
 			dataWriterQos.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
 			DDS::Duration_t livelinessTime = { 1, 0 };
 			dataWriterQos.liveliness.lease_duration = livelinessTime;
 			dataWriterQos.history.kind = KEEP_LAST_HISTORY_QOS;
 			dataWriterQos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
-			
+
+			// 创建写数据工具
 			DDS::DataWriter_var writer =
-				dataA_leftTopicPublisher->create_datawriter(dataA_leftTopic,
+					publisher->create_datawriter(topic,
 					dataWriterQos, // DATAWRITER_QOS_DEFAULT
 					nullptr,
 					OpenDDS::DCPS::DEFAULT_STATUS_MASK);
@@ -333,44 +281,10 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 				return;
 			}
 
-			ShapeDemo::ShapeInfoDataWriter_var message_writer = ShapeDemo::ShapeInfoDataWriter::_narrow(writer);
+			ShapeInfoDataWriter_var message_writer = ShapeInfoDataWriter::_narrow(writer);
 			if (!message_writer)
 			{
 				ASSERT(0);
-			}
-
-
-
-			// 阻塞直至订阅者出现
-			DDS::StatusCondition_var condition = writer->get_statuscondition();
-			condition->set_enabled_statuses(DDS::PUBLICATION_MATCHED_STATUS);
-
-			DDS::WaitSet_var ws = new DDS::WaitSet; // 不能使用delete ws
-			ws->attach_condition(condition);
-
-			DDS::PublicationMatchedStatus matches;
-			while (!token.is_canceled())
-			{
-				if (writer->get_publication_matched_status(matches) != DDS::RETCODE_OK)
-				{
-					ASSERT(0);
-				}
-
-				DDS::ConditionSeq conditions;
-				DDS::Duration_t timeout = { 1, 0 };
-				ReturnCode_t ret = ws->wait(conditions, timeout);
-				if (DDS::RETCODE_OK != ret)
-				{
-					if (DDS::RETCODE_TIMEOUT == ret)
-					{
-						continue;
-					}
-					else
-					{
-						ASSERT(0);
-						return;
-					}
-				}
 			}
 
 			DDS::Duration_t timeout = { 30, 0 };			
@@ -441,9 +355,9 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 			}
 
 			// 清理资源
-// 			publisher->delete_datawriter(writer);
-// 			_participant->delete_publisher(publisher);
-// 			_participant->delete_topic(dataA_leftTopic);
+			publisher->delete_datawriter(writer);
+			_participant->delete_publisher(publisher);
+			_participant->delete_topic(topic);
 
 // 			log.Format(L"数据：%d已停止", sampleIndex);
 // 			AppendMSG(log);
@@ -468,7 +382,7 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 			// 创建主题
 			CORBA::String_var type_name = _shapeInfo_TS->get_type_name();
 			DDS::Topic_var topic =
-					_participant->create_topic(CStringA("test topic Left"),
+					_participant->create_topic(shapeInfo->shapeType,
 					type_name,
 					TOPIC_QOS_DEFAULT,
 					0,
@@ -540,39 +454,15 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 				ASSERT(0);
 			}
 
-			// 阻塞直至有主题发布
-			DDS::StatusCondition_var condition = reader->get_statuscondition();
-			condition->set_enabled_statuses(DDS::SUBSCRIPTION_MATCHED_STATUS);
-
-			DDS::WaitSet_var ws = new DDS::WaitSet;
-			ws->attach_condition(condition);
-
 			while (!token.is_canceled())
 			{
-				DDS::SubscriptionMatchedStatus matches;
-				if (reader->get_subscription_matched_status(matches) != DDS::RETCODE_OK)
-				{
-					ASSERT(0);
-				}
-
-				DDS::ConditionSeq conditions;
-				DDS::Duration_t timeout = { 1, 0 };
-				ReturnCode_t ret = ws->wait(conditions, timeout);
-				if (DDS::RETCODE_OK != ret)
-				{
-					if (DDS::RETCODE_TIMEOUT == ret)
-					{
-						continue;
-					}
-					else
-					{
-						ASSERT(0);
-						return;
-					}
-				}
+				Sleep(100);
 			}
 
-			ws->detach_condition(condition);
+			// 清理资源
+			subscriber->delete_datareader(reader);
+			_participant->delete_subscriber(subscriber);
+			_participant->delete_topic(topic);
 		}, token);
 	}
 }
