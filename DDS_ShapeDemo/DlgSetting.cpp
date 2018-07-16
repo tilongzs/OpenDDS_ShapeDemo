@@ -82,19 +82,19 @@ void CDlgSetting::OnBnClickedOk()
 	}
 	else if (color == L"红色")
 	{
-		_shapeInfo->color = GenRGBHex(255, 0, 0);
+		_shapeInfo->color = RGB(255, 0, 0);
 	}
 	else if (color == L"蓝色")
 	{
-		_shapeInfo->color = GenRGBHex(0, 0, 255);
+		_shapeInfo->color = RGB(0, 0, 255);
 	}
 	else if (color == L"黄色")
 	{
-		_shapeInfo->color = GenRGBHex(255, 255, 0);
+		_shapeInfo->color = RGB(255, 255, 0);
 	}
 	else if (color == L"绿色")
 	{
-		_shapeInfo->color = GenRGBHex(0, 255, 0);
+		_shapeInfo->color = RGB(0, 255, 0);
 	}
 
 	CString size;

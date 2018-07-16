@@ -1,16 +1,6 @@
 #include "stdafx.h"
 #include "Common.h"
 
-int GenRGBHex(int r, int g, int b)
-{
-	int rgb = 0;
-	rgb += (r << 16);
-	rgb += (g << 8);
-	rgb += b;
-
-	return rgb;
-}
-
 CString GetModuleDir()
 {
 	WCHAR buf[MAX_PATH];

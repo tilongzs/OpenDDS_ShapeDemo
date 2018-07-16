@@ -47,8 +47,6 @@ BOOL CDDS_ShapeDemoDlg::OnInitDialog()
 
 	AcquireSRWLockExclusive(&_srwShapeBmp);
 	_shapeBmp = make_shared<Bitmap>(gShapeBmpWidth, gShapeBmpHeight);
-	Graphics tmpG(_shapeBmp.get());
-	tmpG.FillRectangle(&SolidBrush(Color(255, 255, 255)), 0, 0, gShapeBmpWidth, gShapeBmpHeight);
 	ReleaseSRWLockExclusive(&_srwShapeBmp);
 
 	InitOpenDDS();
@@ -112,12 +110,14 @@ void CDDS_ShapeDemoDlg::ShowShape()
 	AcquireSRWLockExclusive(&_srwShapeBmp);
 
 	Graphics tmpG(_shapeBmp.get());
+	int shapeBmpWidht = _shapeBmp->GetWidth();
+	int shapeBmpHeight = _shapeBmp->GetHeight();
 	tmpG.FillRectangle(&SolidBrush(Color(255, 255, 255)), 0, 0, gShapeBmpWidth, gShapeBmpHeight);
 	for each (auto iter in _samples)
 	{
 		AcquireSRWLockShared(&iter.second->srwShape);
 		auto& shapeInfo = iter.second->shapeInfo;
-		if (shapeInfo->shapeType == "三角形")
+		if (shapeInfo->shapeType == CStringA("triangle"))
 		{
 			int height = shapeInfo->size / 2 * tan(60);
 			Gdiplus::GraphicsPath path;
@@ -125,23 +125,38 @@ void CDDS_ShapeDemoDlg::ShowShape()
 								Point(shapeInfo->posX, shapeInfo->posY + shapeInfo->size), 
 								Point(shapeInfo->posX + shapeInfo->size, shapeInfo->posY + shapeInfo->size) };
 			path.AddCurve(points, 3);
-			tmpG.FillPath(&SolidBrush(Color(shapeInfo->color)), &path);
+
+			tmpG.SetCompositingQuality(CompositingQualityHighQuality);
+			tmpG.SetInterpolationMode(InterpolationModeHighQualityBicubic);
+			tmpG.SetSmoothingMode(SmoothingModeHighQuality);
+			tmpG.FillPolygon(&SolidBrush(Color(GetRValue(shapeInfo->color), GetGValue(shapeInfo->color), GetBValue(shapeInfo->color))), points, 3);
 		}
-		else if (shapeInfo->shapeType == "四方形")
+		else if (shapeInfo->shapeType == CStringA("square"))
 		{
 			Rect rect(shapeInfo->posX, shapeInfo->posY, shapeInfo->size, shapeInfo->size);
-			tmpG.FillRectangle(&SolidBrush(Color(shapeInfo->color)), rect);
+			tmpG.FillRectangle(&SolidBrush(Color(GetRValue(shapeInfo->color), GetGValue(shapeInfo->color), GetBValue(shapeInfo->color))), rect);
 		}
-		else if (shapeInfo->shapeType == "圆形")
+		else if (shapeInfo->shapeType == CStringA("cricle"))
 		{
 			Rect rect(shapeInfo->posX, shapeInfo->posY, shapeInfo->size, shapeInfo->size);
-			tmpG.FillEllipse(&SolidBrush(Color(shapeInfo->color)), rect);
+			tmpG.SetCompositingQuality(CompositingQualityHighQuality);
+			tmpG.SetInterpolationMode(InterpolationModeHighQualityBicubic);
+			tmpG.SetSmoothingMode(SmoothingModeHighQuality);
+			tmpG.FillEllipse(&SolidBrush(Color(GetRValue(shapeInfo->color), GetGValue(shapeInfo->color), GetBValue(shapeInfo->color))), rect);
 		}
 		ReleaseSRWLockShared(&iter.second->srwShape);
 	}
 
 	ReleaseSRWLockExclusive(&_srwShapeBmp);
 	ReleaseSRWLockShared(&_srwSamples);
+
+	CRect rect;
+	GetClientRect(rect);
+	
+	const int rectWidth = 350;
+	const int rectHeight = 350;
+	CRect bmpRect(rect.Width() - rectWidth, 50 + 25, rect.Width() - rectWidth + rectWidth, 50 + 25 + rectHeight);
+	InvalidateRect(bmpRect, FALSE);
 }
 
 void CDDS_ShapeDemoDlg::OnPaint()
@@ -165,17 +180,30 @@ void CDDS_ShapeDemoDlg::OnPaint()
 	}
 	else
 	{
+		CPaintDC dc(this);
+		CDC memDC;
+		CBitmap memBmp;
+		memDC.CreateCompatibleDC(&dc);
+		memBmp.CreateCompatibleBitmap(&dc, rect.Width(), rect.Height());
+		CBitmap* oldBmp = memDC.SelectObject(&memBmp);
+
+		Graphics g(memDC);
 		const int rectWidth = 350;
 		const int rectHeight = 350;
 
-		CPaintDC dc(this);
-		Graphics g(dc);
+		g.FillRectangle(&SolidBrush(Color(255, 255, 255)), 0, 0, rect.Width(), rect.Height());
 		// 图形区域边框
 		g.FillRectangle(&SolidBrush(Color(128, 128, 128)), rect.Width() - rectWidth - 20, 50, rectWidth, rectHeight);
 
 		AcquireSRWLockShared(&_srwShapeBmp);
-		g.DrawImage(_shapeBmp.get(), rect.Width() - rectWidth - 20 + 25, 50 + 25, _shapeBmp->GetWidth(), _shapeBmp->GetHeight());
+		g.FillRectangle(&SolidBrush(Color(255, 0, 0)), rect.Width() - rectWidth - 20 + 25, 50 + 25, gShapeBmpWidth, gShapeBmpHeight);
+		g.DrawImage(_shapeBmp.get(), rect.Width() - rectWidth - 20 + 25, 50 + 25, gShapeBmpWidth, gShapeBmpHeight);
 		ReleaseSRWLockShared(&_srwShapeBmp);
+
+		dc.BitBlt(0, 0, rect.Width(), rect.Height(), &memDC, 0, 0, SRCCOPY);
+		memDC.SelectObject(oldBmp);
+		memBmp.DeleteObject();
+		memDC.DeleteDC();		
 	}
 }
 
@@ -351,7 +379,7 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 					ASSERT(0);
 				}
 
-				Sleep(1000);
+				Sleep(10);
 			}
 
 			// 清理资源
@@ -423,11 +451,11 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 			if (shapeInfo->color == -1)
 			{
 				// 全部颜色
-				strFilter.Format("shapeType=%s", shapeInfo->shapeType);
+				strFilter.Format("shapeType='%s'", shapeInfo->shapeType);
 			}
 			else
 			{
-				strFilter.Format("shapeType=%s and color=%d", shapeInfo->shapeType, shapeInfo->color);
+				strFilter.Format("shapeType='%s' and color=%d", shapeInfo->shapeType, shapeInfo->color);
 			}
 
 			DDS::ContentFilteredTopic_var cft =
@@ -436,8 +464,8 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 					strFilter,
 					StringSeq());
 
-		//	DDS::DataReader_var reader = subscriber->create_datareader(cft,
-			DDS::DataReader_var reader = subscriber->create_datareader(topic,
+			DDS::DataReader_var reader = subscriber->create_datareader(cft,
+		//	DDS::DataReader_var reader = subscriber->create_datareader(topic,
 				dataReaderQos,// DATAREADER_QOS_DEFAULT
 				dataReaderListener,
 				OpenDDS::DCPS::DEFAULT_STATUS_MASK);
