@@ -77,7 +77,7 @@ void CDDS_ShapeDemoDlg::InitOpenDDS()
 		}
 
 		// 创建域参与者
-		_participant = _dpf->create_participant(774, // 域ID
+		_participant = _dpf->create_participant(233, // 域ID
 			PARTICIPANT_QOS_DEFAULT,
 			0,
 			OpenDDS::DCPS::DEFAULT_STATUS_MASK);
@@ -238,14 +238,64 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 		auto token = taskData->cts->get_token();
 		taskData->task = make_shared<task<void>>([&, token, sampleShape, sampleData]
 		{
+// 			CString log;
+// 			// 创建主题
+// 			CORBA::String_var type_name = _shapeInfo_TS->get_type_name();
+// 			Topic_var dataA_leftTopic = _participant->create_topic(CStringA("test topic Left"),
+// 				type_name,
+// 				TOPIC_QOS_DEFAULT,
+// 				0,
+// 				OpenDDS::DCPS::DEFAULT_STATUS_MASK);
+// 			if (!dataA_leftTopic)
+// 			{
+// 				AppendMSG(L"创建主题失败");
+// 				return;
+// 			}
+// 
+// 			// 创建发布者
+// 			Publisher_var publisher = _participant->create_publisher(PUBLISHER_QOS_DEFAULT, 0, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
+// 			if (!publisher)
+// 			{
+// 				AppendMSG(L"创建发布者失败");
+// 				return;
+// 			}
+// 
+// 			DataWriterQos dataWriterQos;
+// 			publisher->get_default_datawriter_qos(dataWriterQos);
+// 			dataWriterQos.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
+// 			DDS::Duration_t livelinessTime = { 1, 0 };
+// 			dataWriterQos.liveliness.lease_duration = livelinessTime;
+// 			dataWriterQos.history.kind = KEEP_LAST_HISTORY_QOS;
+// 			dataWriterQos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
+// 
+// 			// 创建写数据工具
+// 			DDS::DataWriter_var writer =
+// 					publisher->create_datawriter(dataA_leftTopic,
+// 					dataWriterQos, // DATAWRITER_QOS_DEFAULT
+// 					nullptr,
+// 					OpenDDS::DCPS::DEFAULT_STATUS_MASK);
+// 
+// 			if (!writer)
+// 			{
+// 				AppendMSG(L"创建写数据工具失败");
+// 				return;
+// 			}
+// 
+// 			ShapeInfoDataWriter_var message_writer = ShapeInfoDataWriter::_narrow(writer);
+// 			if (!message_writer)
+// 			{
+// 				ASSERT(0);
+// 			}
+
 			CString log;
 			// 创建主题
 			CORBA::String_var type_name = _shapeInfo_TS->get_type_name();
-			Topic_var dataA_leftTopic = _participant->create_topic(CStringA(sampleShape->shapeType),
+			Topic_var dataA_leftTopic = _participant->create_topic(CStringA("test topic Left"),
 				type_name,
 				TOPIC_QOS_DEFAULT,
 				0,
 				OpenDDS::DCPS::DEFAULT_STATUS_MASK);
+
 			if (!dataA_leftTopic)
 			{
 				AppendMSG(L"创建主题失败");
@@ -253,24 +303,26 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 			}
 
 			// 创建发布者
-			Publisher_var publisher = _participant->create_publisher(PUBLISHER_QOS_DEFAULT, 0, OpenDDS::DCPS::DEFAULT_STATUS_MASK);
-			if (!publisher)
+			Publisher_var dataA_leftTopicPublisher = _participant->create_publisher(PUBLISHER_QOS_DEFAULT,
+				0,
+				OpenDDS::DCPS::DEFAULT_STATUS_MASK);
+
+			if (!dataA_leftTopicPublisher)
 			{
 				AppendMSG(L"创建发布者失败");
 				return;
 			}
 
 			DataWriterQos dataWriterQos;
-			publisher->get_default_datawriter_qos(dataWriterQos);
+			dataA_leftTopicPublisher->get_default_datawriter_qos(dataWriterQos);
 			dataWriterQos.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
 			DDS::Duration_t livelinessTime = { 1, 0 };
 			dataWriterQos.liveliness.lease_duration = livelinessTime;
 			dataWriterQos.history.kind = KEEP_LAST_HISTORY_QOS;
 			dataWriterQos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
-
-			// 创建写数据工具
+			
 			DDS::DataWriter_var writer =
-					publisher->create_datawriter(dataA_leftTopic,
+				dataA_leftTopicPublisher->create_datawriter(dataA_leftTopic,
 					dataWriterQos, // DATAWRITER_QOS_DEFAULT
 					nullptr,
 					OpenDDS::DCPS::DEFAULT_STATUS_MASK);
@@ -281,11 +333,13 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 				return;
 			}
 
-			ShapeInfoDataWriter_var message_writer = ShapeInfoDataWriter::_narrow(writer);
+			ShapeDemo::ShapeInfoDataWriter_var message_writer = ShapeDemo::ShapeInfoDataWriter::_narrow(writer);
 			if (!message_writer)
 			{
 				ASSERT(0);
 			}
+
+
 
 			// 阻塞直至订阅者出现
 			DDS::StatusCondition_var condition = writer->get_statuscondition();
@@ -387,9 +441,9 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 			}
 
 			// 清理资源
-			publisher->delete_datawriter(writer);
-			_participant->delete_publisher(publisher);
-			_participant->delete_topic(dataA_leftTopic);
+// 			publisher->delete_datawriter(writer);
+// 			_participant->delete_publisher(publisher);
+// 			_participant->delete_topic(dataA_leftTopic);
 
 // 			log.Format(L"数据：%d已停止", sampleIndex);
 // 			AppendMSG(log);
@@ -414,7 +468,7 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 			// 创建主题
 			CORBA::String_var type_name = _shapeInfo_TS->get_type_name();
 			DDS::Topic_var topic =
-					_participant->create_topic(CStringA(shapeInfo->shapeType),
+					_participant->create_topic(CStringA("test topic Left"),
 					type_name,
 					TOPIC_QOS_DEFAULT,
 					0,
