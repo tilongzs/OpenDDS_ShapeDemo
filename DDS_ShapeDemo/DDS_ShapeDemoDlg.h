@@ -81,8 +81,10 @@ private:
 	map<int/*topicID*/, shared_ptr<TaskData>>	_taskPublish;
 	map<int/*topicID*/, shared_ptr<TaskData>>	_taskSubscribe;
 
-	SRWLOCK										_srwSamples;
-	map<int/*sampleID*/, shared_ptr<SampleData>> _samples;
+	SRWLOCK										_srwSamplesPublish;
+	SRWLOCK										_srwSamplesSubscribe;
+	map<int/*sampleID*/, shared_ptr<SampleData>> _samplesPublish;
+	map<int/*sampleID*/, shared_ptr<SampleData>> _samplesSubscribe;
 
 	CEdit					_editMsg;
 	CListBox				_listData;

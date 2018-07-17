@@ -72,15 +72,15 @@ void CDlgSetting::OnBnClickedOk()
 	_comboShapeType.GetLBText(_comboShapeType.GetCurSel(), shapeType);
 	if (shapeType == L"三角形")
 	{
-		_shapeInfo->shapeType = "triangle";
+		_shapeInfo->shapeType = "三角形";
 	}
 	else if (shapeType == L"四方形")
 	{
-		_shapeInfo->shapeType = "square";
+		_shapeInfo->shapeType = CStringA("四方形");
 	}
 	else if (shapeType == L"圆形")
 	{
-		_shapeInfo->shapeType = "cricle";
+		_shapeInfo->shapeType = "圆形";
 	}
 
 	CString color;

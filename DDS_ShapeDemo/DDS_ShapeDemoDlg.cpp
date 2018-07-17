@@ -18,7 +18,8 @@ CDDS_ShapeDemoDlg::CDDS_ShapeDemoDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DDS_SHAPEDEMO_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
-	InitializeSRWLock(&_srwSamples);
+	InitializeSRWLock(&_srwSamplesPublish);
+	InitializeSRWLock(&_srwSamplesSubscribe);
 	InitializeSRWLock(&_srwShapeBmp);
 }
 
@@ -106,53 +107,81 @@ void CDDS_ShapeDemoDlg::InitOpenDDS()
 
 void CDDS_ShapeDemoDlg::ShowShape()
 {
-	AcquireSRWLockShared(&_srwSamples);
-	AcquireSRWLockExclusive(&_srwShapeBmp);
-
-	Graphics tmpG(_shapeBmp.get());
-	int shapeBmpWidht = _shapeBmp->GetWidth();
-	int shapeBmpHeight = _shapeBmp->GetHeight();
-	tmpG.FillRectangle(&SolidBrush(Color(255, 255, 255)), 0, 0, gShapeBmpWidth, gShapeBmpHeight);
-	for each (auto iter in _samples)
+	auto DrawShape = [&](Graphics& tmpG, shared_ptr<SampleData>& sampleData, bool isSubscribe)
 	{
-		AcquireSRWLockShared(&iter.second->srwShape);
-		auto& shapeInfo = iter.second->shapeInfo;
-		if (shapeInfo->shapeType == CStringA("triangle"))
+		AcquireSRWLockShared(&sampleData->srwShape);
+		auto& shapeInfo = sampleData->shapeInfo;
+		if (shapeInfo->shapeType == CStringA("三角形"))
 		{
 			int height = shapeInfo->size / 2 * tan(60);
 			Gdiplus::GraphicsPath path;
-			Point points[3] = { Point(shapeInfo->posX + shapeInfo->size/2, shapeInfo->posY), 
-								Point(shapeInfo->posX, shapeInfo->posY + shapeInfo->size), 
-								Point(shapeInfo->posX + shapeInfo->size, shapeInfo->posY + shapeInfo->size) };
+			Point points[3] = { Point(shapeInfo->posX + shapeInfo->size / 2, shapeInfo->posY),
+				Point(shapeInfo->posX, shapeInfo->posY + shapeInfo->size),
+				Point(shapeInfo->posX + shapeInfo->size, shapeInfo->posY + shapeInfo->size) };
 			path.AddCurve(points, 3);
 
 			tmpG.SetCompositingQuality(CompositingQualityHighQuality);
 			tmpG.SetInterpolationMode(InterpolationModeHighQualityBicubic);
 			tmpG.SetSmoothingMode(SmoothingModeHighQuality);
 			tmpG.FillPolygon(&SolidBrush(Color(GetRValue(shapeInfo->color), GetGValue(shapeInfo->color), GetBValue(shapeInfo->color))), points, 3);
+
+			if (isSubscribe)
+			{
+				tmpG.DrawPolygon(&Pen(Color(50, 50, 50), 2.5), points, 3);
+			}
 		}
-		else if (shapeInfo->shapeType == CStringA("square"))
+		else if (shapeInfo->shapeType == CStringA("四边形"))
 		{
 			Rect rect(shapeInfo->posX, shapeInfo->posY, shapeInfo->size, shapeInfo->size);
 			tmpG.FillRectangle(&SolidBrush(Color(GetRValue(shapeInfo->color), GetGValue(shapeInfo->color), GetBValue(shapeInfo->color))), rect);
+
+			if (isSubscribe)
+			{
+				tmpG.DrawRectangle(&Pen(Color(50, 50, 50), 2.5), rect);
+			}
 		}
-		else if (shapeInfo->shapeType == CStringA("cricle"))
+		else if (shapeInfo->shapeType == CStringA("圆形"))
 		{
 			Rect rect(shapeInfo->posX, shapeInfo->posY, shapeInfo->size, shapeInfo->size);
 			tmpG.SetCompositingQuality(CompositingQualityHighQuality);
 			tmpG.SetInterpolationMode(InterpolationModeHighQualityBicubic);
 			tmpG.SetSmoothingMode(SmoothingModeHighQuality);
 			tmpG.FillEllipse(&SolidBrush(Color(GetRValue(shapeInfo->color), GetGValue(shapeInfo->color), GetBValue(shapeInfo->color))), rect);
+
+			if (isSubscribe)
+			{
+				tmpG.DrawEllipse(&Pen(Color(50, 50, 50), 2.5), rect);
+			}
 		}
-		ReleaseSRWLockShared(&iter.second->srwShape);
+		ReleaseSRWLockShared(&sampleData->srwShape);
+	};
+
+	// 绘制所有图形
+	AcquireSRWLockExclusive(&_srwShapeBmp);
+
+	Graphics tmpG(_shapeBmp.get());
+	int shapeBmpWidht = _shapeBmp->GetWidth();
+	int shapeBmpHeight = _shapeBmp->GetHeight();
+	tmpG.FillRectangle(&SolidBrush(Color(255, 255, 255)), 0, 0, gShapeBmpWidth, gShapeBmpHeight);
+
+	AcquireSRWLockShared(&_srwSamplesPublish);
+	for each (auto iter in _samplesPublish)
+	{
+		DrawShape(tmpG, iter.second, false);
 	}
+	ReleaseSRWLockShared(&_srwSamplesPublish);
+
+	AcquireSRWLockShared(&_srwSamplesSubscribe);
+	for each (auto iter in _samplesSubscribe)
+	{
+		DrawShape(tmpG, iter.second, true);
+	}
+	ReleaseSRWLockShared(&_srwSamplesSubscribe);
 
 	ReleaseSRWLockExclusive(&_srwShapeBmp);
-	ReleaseSRWLockShared(&_srwSamples);
 
 	CRect rect;
 	GetClientRect(rect);
-	
 	const int rectWidth = 350;
 	const int rectHeight = 350;
 	CRect bmpRect(rect.Width() - rectWidth, 50 + 25, rect.Width() - rectWidth + rectWidth, 50 + 25 + rectHeight);
@@ -254,9 +283,9 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 
 		shared_ptr<SampleData> sampleData = make_shared<SampleData>();
 		sampleData->shapeInfo = sampleShape;
-		AcquireSRWLockExclusive(&_srwSamples);
-		_samples.insert(map<int, shared_ptr<SampleData>>::value_type(sampleShape->id, sampleData));
-		ReleaseSRWLockExclusive(&_srwSamples);
+		AcquireSRWLockExclusive(&_srwSamplesPublish);
+		_samplesPublish.insert(map<int, shared_ptr<SampleData>>::value_type(sampleShape->id, sampleData));
+		ReleaseSRWLockExclusive(&_srwSamplesPublish);
 
 		shared_ptr<TaskData> taskData = make_shared<TaskData>();
 		taskData->shapeInfo = shapeInfo;
@@ -509,22 +538,22 @@ void CDDS_ShapeDemoDlg::on_data_available(DDS::DataReader_ptr reader)
 		{
 			if (sampleInfos[i].valid_data)
 			{
-				AcquireSRWLockExclusive(&_srwSamples);
-				if (_samples.find(shapeInfo[i].id) == _samples.end())
+				AcquireSRWLockExclusive(&_srwSamplesSubscribe);
+				if (_samplesSubscribe.find(shapeInfo[i].id) == _samplesSubscribe.end())
 				{
 					shared_ptr<SampleData> sampleData = make_shared<SampleData>();
 					sampleData->shapeInfo = make_shared<ShapeInfo>();
 					*sampleData->shapeInfo = shapeInfo[i];
-					_samples.insert(map<int, shared_ptr<SampleData>>::value_type(shapeInfo[i].id, sampleData));
+					_samplesSubscribe.insert(map<int, shared_ptr<SampleData>>::value_type(shapeInfo[i].id, sampleData));
 				}
 				else
 				{
-					auto& sampleData = _samples[shapeInfo[i].id];
+					auto& sampleData = _samplesSubscribe[shapeInfo[i].id];
 					AcquireSRWLockExclusive(&sampleData->srwShape);
 					*sampleData->shapeInfo = shapeInfo[i];
 					ReleaseSRWLockExclusive(&sampleData->srwShape);
 				}
-				ReleaseSRWLockExclusive(&_srwSamples);
+				ReleaseSRWLockExclusive(&_srwSamplesSubscribe);
 			}
 		}
 	}
