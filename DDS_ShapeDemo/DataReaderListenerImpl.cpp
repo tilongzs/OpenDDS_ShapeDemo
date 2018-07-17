@@ -9,9 +9,10 @@
 #include "DDS_ShapeDemoDlg.h"
 
 
-void CDataReaderListenerImpl::Init(CDDS_ShapeDemoDlg* dlg)
+void CDataReaderListenerImpl::Init(CDDS_ShapeDemoDlg* dlg, int taskIndex)
 {
 	_dlg = dlg;
+	_taskIndex = taskIndex;
 }
 
 void CDataReaderListenerImpl::on_requested_deadline_missed(
@@ -40,7 +41,7 @@ void CDataReaderListenerImpl::on_liveliness_changed(
 
 void CDataReaderListenerImpl::on_data_available(DDS::DataReader_ptr reader)
 {
-	_dlg->on_data_available(reader);
+	_dlg->on_data_available(reader, _taskIndex);
 }
 
 void CDataReaderListenerImpl::on_subscription_matched(

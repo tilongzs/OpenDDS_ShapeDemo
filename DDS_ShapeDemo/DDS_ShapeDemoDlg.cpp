@@ -10,7 +10,8 @@
 #define WMSG_LOG		WM_USER + 1
 #define TIMER_SHOW_SHAPE 1
 
-static long gSampleID = 0;
+static long gShapeID = 0;
+static long gTaskIndex = 0;
 static int gShapeBmpWidth = 300;	// 画布宽度
 static int gShapeBmpHeight = 300;	// 画布长度
 static int gShapeMoveInterval = 1;	// 移动步长
@@ -38,6 +39,7 @@ BEGIN_MESSAGE_MAP(CDDS_ShapeDemoDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_PUBLISH, &CDDS_ShapeDemoDlg::OnBtnPublish)
 	ON_BN_CLICKED(IDC_BUTTON_SUBSCRIBE, &CDDS_ShapeDemoDlg::OnBtnSubscribe)
 	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_BUTTON_STOP, &CDDS_ShapeDemoDlg::OnBtnStop)
 END_MESSAGE_MAP()
 
 BOOL CDDS_ShapeDemoDlg::OnInitDialog()
@@ -45,7 +47,17 @@ BOOL CDDS_ShapeDemoDlg::OnInitDialog()
 	CDialogEx::OnInitDialog();
 
 	SetIcon(m_hIcon, TRUE);			
-	SetIcon(m_hIcon, FALSE);		
+	SetIcon(m_hIcon, FALSE);
+
+	_listData.SetExtendedStyle(_listData.GetExtendedStyle() | LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+	_listData.InsertColumn(0, L"主题");
+	_listData.InsertColumn(1, L"类型");
+	_listData.InsertColumn(1, L"颜色");
+	_listData.InsertColumn(1, L"大小");
+	_listData.SetColumnWidth(0, 100);
+	_listData.SetColumnWidth(1, 100);
+	_listData.SetColumnWidth(2, 100);
+	_listData.SetColumnWidth(3, 100);
 
 	AcquireSRWLockExclusive(&_srwShapeBmp);
 	_shapeBmp = make_shared<Bitmap>(gShapeBmpWidth, gShapeBmpHeight);
@@ -185,7 +197,7 @@ void CDDS_ShapeDemoDlg::ShowShape()
 	GetClientRect(rect);
 	const int rectWidth = 350;
 	const int rectHeight = 350;
-	CRect bmpRect(rect.Width() - rectWidth, 50 + 25, rect.Width() - rectWidth + rectWidth, 50 + 25 + rectHeight);
+	CRect bmpRect(rect.Width() - rectWidth - 20, 50, rect.Width() - 20, 50 + rectHeight);
 	InvalidateRect(bmpRect, FALSE);
 }
 
@@ -278,30 +290,36 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 	if (dlgSetting.DoModal())
 	{
 		srand(time(NULL));
-		shared_ptr<ShapeInfo> sampleShape = make_shared<ShapeInfo>();
-		*sampleShape = *shapeInfo;
-		sampleShape->id = InterlockedIncrement(&gSampleID);
-		sampleShape->posX = rand() % 200;
-		sampleShape->posY = rand() % 200;
+		shapeInfo->id = InterlockedIncrement(&gShapeID);
+		shapeInfo->posX = rand() % 200;
+		shapeInfo->posY = rand() % 200;
+
+		gTaskIndex++;
+		int rows = _listData.GetItemCount();
+		_listData.InsertItem(rows, CString(shapeInfo->shapeType));
+		_listData.SetItemText(rows, 1, L"发布");
+		_listData.SetItemText(rows, 2, GetColorText(shapeInfo->color));
+		_listData.SetItemText(rows, 3, Int2CStr(shapeInfo->size));
+		_listData.SetItemData(rows, gTaskIndex);
 
 		shared_ptr<SampleData> sampleData = make_shared<SampleData>();
-		sampleData->shapeInfo = sampleShape;
+		sampleData->shapeInfo = shapeInfo;
 		AcquireSRWLockExclusive(&_srwSamplesPublish);
-		_samplesPublish.insert(map<int, shared_ptr<SampleData>>::value_type(sampleShape->id, sampleData));
+		_samplesPublish.insert(map<int, shared_ptr<SampleData>>::value_type(shapeInfo->id, sampleData));
 		ReleaseSRWLockExclusive(&_srwSamplesPublish);
 
 		shared_ptr<TaskData> taskData = make_shared<TaskData>();
 		taskData->shapeInfo = shapeInfo;
-		int sampleIndex = _taskPublish.size(); // 索引，递增
-		_taskPublish.insert(map<int, shared_ptr<TaskData>>::value_type(sampleIndex, taskData));
+		_tasks.insert(map<int, shared_ptr<TaskData>>::value_type(gTaskIndex, taskData));
 		taskData->cts = make_shared<cancellation_token_source>();
 		auto token = taskData->cts->get_token();
-		taskData->task = make_shared<task<void>>([&, token, sampleShape, sampleData]
+		taskData->task = make_shared<task<void>>([&, token, sampleData]
 		{
+			shared_ptr<ShapeInfo>& shapeInfo = sampleData->shapeInfo;
 			CString log;
 			// 创建主题
 			CORBA::String_var type_name = _shapeInfo_TS->get_type_name();
-			Topic_var topic = _participant->create_topic(sampleShape->shapeType,
+			Topic_var topic = _participant->create_topic(shapeInfo->shapeType,
 				type_name,
 				TOPIC_QOS_DEFAULT,
 				0,
@@ -347,58 +365,58 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 				ASSERT(0);
 			}
 
-			DDS::Duration_t timeout = { 30, 0 };			
+			DDS::Duration_t timeout = { 5, 0 };			
 			while (!token.is_canceled())
 			{
 				AcquireSRWLockExclusive(&sampleData->srwShape);
 
 				// 移动图形
-				if (sampleShape->directionX)
+				if (shapeInfo->directionX)
 				{
 					// 正在向右移动
-					sampleShape->posX += gShapeMoveInterval;
-					if (sampleShape->posX + sampleShape->size > gShapeBmpWidth)
+					shapeInfo->posX += gShapeMoveInterval;
+					if (shapeInfo->posX + shapeInfo->size > gShapeBmpWidth)
 					{
-						sampleShape->posX = gShapeBmpWidth - sampleShape->size - gShapeMoveInterval;
-						sampleShape->directionX = 0; // 转向
+						shapeInfo->posX = gShapeBmpWidth - shapeInfo->size - gShapeMoveInterval;
+						shapeInfo->directionX = 0; // 转向
 					}					
 				}
 				else
 				{
 					// 正在向左移动
-					sampleShape->posX -= gShapeMoveInterval;
-					if (sampleShape->posX < 0)
+					shapeInfo->posX -= gShapeMoveInterval;
+					if (shapeInfo->posX < 0)
 					{
-						sampleShape->posX = gShapeMoveInterval;
-						sampleShape->directionX = 1; // 转向
+						shapeInfo->posX = gShapeMoveInterval;
+						shapeInfo->directionX = 1; // 转向
 					}
 				}
 
-				if (sampleShape->directionY)
+				if (shapeInfo->directionY)
 				{
 					// 正在向下移动
-					sampleShape->posY += gShapeMoveInterval;
-					if (sampleShape->posY + sampleShape->size > gShapeBmpHeight)
+					shapeInfo->posY += gShapeMoveInterval;
+					if (shapeInfo->posY + shapeInfo->size > gShapeBmpHeight)
 					{
-						sampleShape->posY = gShapeBmpHeight - sampleShape->size - gShapeMoveInterval;
-						sampleShape->directionY = 0; // 转向
+						shapeInfo->posY = gShapeBmpHeight - shapeInfo->size - gShapeMoveInterval;
+						shapeInfo->directionY = 0; // 转向
 					}
 				}
 				else
 				{
 					// 正在向上移动
-					sampleShape->posY -= gShapeMoveInterval;
-					if (sampleShape->posY < 0)
+					shapeInfo->posY -= gShapeMoveInterval;
+					if (shapeInfo->posY < 0)
 					{
-						sampleShape->posY = gShapeMoveInterval;
-						sampleShape->directionY = 1; // 转向
+						shapeInfo->posY = gShapeMoveInterval;
+						shapeInfo->directionY = 1; // 转向
 					}
 				}
 				/********************************************************************************************/
 
-				DDS::InstanceHandle_t handle = message_writer->register_instance(*sampleShape);
-				ReturnCode_t error = message_writer->write(*sampleShape, handle);
-				if (error != DDS::RETCODE_OK)
+				DDS::InstanceHandle_t handle = message_writer->register_instance(*shapeInfo);
+				ReturnCode_t ret = message_writer->write(*shapeInfo, handle);
+				if (ret != DDS::RETCODE_OK)
 				{
 					AppendMSG(L"写数据时出错");
 				}
@@ -406,10 +424,14 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 				ReleaseSRWLockExclusive(&sampleData->srwShape);
 
 				// 等待订阅者接收完毕
-				if (message_writer->wait_for_acknowledgments(timeout) != DDS::RETCODE_OK)
-				{
-					ASSERT(0);
-				}
+// 				ret = message_writer->wait_for_acknowledgments(timeout);
+// 				if (ret != DDS::RETCODE_OK)
+// 				{
+// 					if (ret != DDS::RETCODE_TIMEOUT)
+// 					{
+// 						ASSERT(0);
+// 					}
+// 				}
 
 				Sleep(10);
 			}
@@ -419,8 +441,10 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 			_participant->delete_publisher(publisher);
 			_participant->delete_topic(topic);
 
-// 			log.Format(L"数据：%d已停止", sampleIndex);
-// 			AppendMSG(log);
+			AcquireSRWLockExclusive(&_srwSamplesPublish);
+			_samplesPublish.erase(shapeInfo->id);
+			ReleaseSRWLockExclusive(&_srwSamplesPublish);
+
 		}, token);
 	}
 }
@@ -431,13 +455,20 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 	CDlgSetting dlgSetting(shapeInfo, false);
 	if (dlgSetting.DoModal())
 	{
+		gTaskIndex++;
+		int rows = _listData.GetItemCount();
+		_listData.InsertItem(rows, CString(shapeInfo->shapeType));
+		_listData.SetItemText(rows, 1, L"订阅");
+		_listData.SetItemText(rows, 2, GetColorText(shapeInfo->color));
+		_listData.SetItemText(rows, 3, Int2CStr(shapeInfo->size));
+		_listData.SetItemData(rows, gTaskIndex);
+
 		shared_ptr<TaskData> taskData = make_shared<TaskData>();
 		taskData->shapeInfo = shapeInfo;
-		int sampleIndex = _taskSubscribe.size(); // 索引，递增
-		_taskSubscribe.insert(map<int, shared_ptr<TaskData>>::value_type(sampleIndex, taskData));
+		_tasks.insert(map<int, shared_ptr<TaskData>>::value_type(gTaskIndex, taskData));
 		taskData->cts = make_shared<cancellation_token_source>();
 		auto token = taskData->cts->get_token();
-		taskData->task = make_shared<task<void>>([&, token, shapeInfo]
+		taskData->task = make_shared<task<void>>([&, taskData, token, shapeInfo]
 		{
 			// 创建主题
 			CORBA::String_var type_name = _shapeInfo_TS->get_type_name();
@@ -476,7 +507,7 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 
 			// 创建读监听器
 			CDataReaderListenerImpl* dataReaderListener = new CDataReaderListenerImpl();
-			dataReaderListener->Init(this);
+			dataReaderListener->Init(this, gTaskIndex);
 
 			// 创建过滤规则
 			CStringA strFilter;
@@ -519,11 +550,18 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 			subscriber->delete_datareader(reader);
 			_participant->delete_subscriber(subscriber);
 			_participant->delete_topic(topic);
+
+			AcquireSRWLockExclusive(&_srwSamplesSubscribe);
+			for each (auto iter in taskData->shapeID)
+			{
+				_samplesSubscribe.erase(iter);
+			}
+			ReleaseSRWLockExclusive(&_srwSamplesSubscribe);
 		}, token);
 	}
 }
 
-void CDDS_ShapeDemoDlg::on_data_available(DDS::DataReader_ptr reader)
+void CDDS_ShapeDemoDlg::on_data_available(DDS::DataReader_ptr reader, int taskIndex)
 {
 	ShapeInfoDataReader_var reader_i = ShapeInfoDataReader::_narrow(reader);
 	if (!reader_i) {
@@ -544,12 +582,13 @@ void CDDS_ShapeDemoDlg::on_data_available(DDS::DataReader_ptr reader)
 				AcquireSRWLockExclusive(&_srwSamplesSubscribe);
 				if (_samplesSubscribe.find(shapeInfo[i].id) == _samplesSubscribe.end())
 				{
-					InterlockedExchange(&gSampleID, shapeInfo[i].id);
+					InterlockedExchange(&gShapeID, shapeInfo[i].id);					
 
 					shared_ptr<SampleData> sampleData = make_shared<SampleData>();
 					sampleData->shapeInfo = make_shared<ShapeInfo>();
 					*sampleData->shapeInfo = shapeInfo[i];
 					_samplesSubscribe.insert(map<int, shared_ptr<SampleData>>::value_type(shapeInfo[i].id, sampleData));
+					_tasks[taskIndex]->shapeID.push_back(sampleData->shapeInfo->id);
 				}
 				else
 				{
@@ -576,4 +615,24 @@ void CDDS_ShapeDemoDlg::OnTimer(UINT_PTR nIDEvent)
 	}
 
 	CDialogEx::OnTimer(nIDEvent);
+}
+
+void CDDS_ShapeDemoDlg::OnBtnStop()
+{
+	if (_listData.GetItemCount() == 0)
+	{
+		return;
+	}
+
+	int row = _listData.GetSelectionMark();
+	if (row != -1)
+	{
+		int taskIndex = _listData.GetItemData(row);
+		if (_tasks.find(taskIndex) != _tasks.end())
+		{
+			_tasks[taskIndex]->cts->cancel();
+		}
+
+		_listData.DeleteItem(row);
+	}
 }

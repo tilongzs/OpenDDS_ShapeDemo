@@ -10,9 +10,9 @@ class CDataReaderListenerImpl : public virtual OpenDDS::DCPS::LocalObject<DDS::D
 {
 private:
 	CDDS_ShapeDemoDlg*		_dlg = nullptr;
-
+	int						_taskIndex;
 public:
-	void Init(CDDS_ShapeDemoDlg* dlg);
+	void Init(CDDS_ShapeDemoDlg* dlg, int taskIndex);
 
 	virtual void on_requested_deadline_missed(
 		DDS::DataReader_ptr reader,

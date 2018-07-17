@@ -14,6 +14,7 @@
 #include "DDS_IDL/ShapeInfoTypeSupportImpl.h"
 
 #include <ppltasks.h>
+#include "afxcmn.h"
 using namespace concurrency;
 
 using namespace DDS;
@@ -34,6 +35,7 @@ struct TaskData
 		}
 	}
 
+	vector<int>								shapeID;
 	shared_ptr<cancellation_token_source>	cts;
 	shared_ptr<task<void>>					task;
 	shared_ptr<ShapeInfo>					shapeInfo;
@@ -78,16 +80,15 @@ private:
 	DomainParticipant_var			_participant = nullptr;
 	ShapeInfoTypeSupport_var		_shapeInfo_TS = nullptr;
 
-	map<int/*topicID*/, shared_ptr<TaskData>>	_taskPublish;
-	map<int/*topicID*/, shared_ptr<TaskData>>	_taskSubscribe;
+	map<int/*taskIndex*/, shared_ptr<TaskData>>	_tasks;
 
 	SRWLOCK										_srwSamplesPublish;
 	SRWLOCK										_srwSamplesSubscribe;
-	map<int/*sampleID*/, shared_ptr<SampleData>> _samplesPublish;
-	map<int/*sampleID*/, shared_ptr<SampleData>> _samplesSubscribe;
+	map<int/*shapeID*/, shared_ptr<SampleData>> _samplesPublish;
+	map<int/*shapeID*/, shared_ptr<SampleData>> _samplesSubscribe;
 
 	CEdit					_editMsg;
-	CListBox				_listData;
+	CListCtrl				_listData;
 
 
 	LRESULT OnLog(WPARAM wParam, LPARAM lParam);
@@ -100,6 +101,7 @@ private:
 
 public:
 	void AppendMSG(const CString& msg);
-	void on_data_available(DDS::DataReader_ptr reader);
+	void on_data_available(DDS::DataReader_ptr reader, int taskIndex);
 	
+	afx_msg void OnBtnStop();
 };
