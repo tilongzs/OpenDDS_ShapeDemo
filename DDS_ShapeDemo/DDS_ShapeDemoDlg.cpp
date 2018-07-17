@@ -10,6 +10,7 @@
 #define WMSG_LOG		WM_USER + 1
 #define TIMER_SHOW_SHAPE 1
 
+static long gSampleID = 0;
 static int gShapeBmpWidth = 300;	// 画布宽度
 static int gShapeBmpHeight = 300;	// 画布长度
 static int gShapeMoveInterval = 1;	// 移动步长
@@ -130,7 +131,7 @@ void CDDS_ShapeDemoDlg::ShowShape()
 				tmpG.DrawPolygon(&Pen(Color(50, 50, 50), 2.5), points, 3);
 			}
 		}
-		else if (shapeInfo->shapeType == CStringA("四边形"))
+		else if (shapeInfo->shapeType == CStringA("四方形"))
 		{
 			Rect rect(shapeInfo->posX, shapeInfo->posY, shapeInfo->size, shapeInfo->size);
 			tmpG.FillRectangle(&SolidBrush(Color(GetRValue(shapeInfo->color), GetGValue(shapeInfo->color), GetBValue(shapeInfo->color))), rect);
@@ -276,10 +277,12 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 	CDlgSetting dlgSetting(shapeInfo, true);
 	if (dlgSetting.DoModal())
 	{
+		srand(time(NULL));
 		shared_ptr<ShapeInfo> sampleShape = make_shared<ShapeInfo>();
 		*sampleShape = *shapeInfo;
-		static int sampleID = 1;
-		sampleShape->id = sampleID++;
+		sampleShape->id = InterlockedIncrement(&gSampleID);
+		sampleShape->posX = rand() % 200;
+		sampleShape->posY = rand() % 200;
 
 		shared_ptr<SampleData> sampleData = make_shared<SampleData>();
 		sampleData->shapeInfo = sampleShape;
@@ -328,7 +331,7 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 			// 创建写数据工具
 			DDS::DataWriter_var writer =
 					publisher->create_datawriter(topic,
-					dataWriterQos, // DATAWRITER_QOS_DEFAULT
+					dataWriterQos,
 					nullptr,
 					OpenDDS::DCPS::DEFAULT_STATUS_MASK);
 
@@ -541,6 +544,8 @@ void CDDS_ShapeDemoDlg::on_data_available(DDS::DataReader_ptr reader)
 				AcquireSRWLockExclusive(&_srwSamplesSubscribe);
 				if (_samplesSubscribe.find(shapeInfo[i].id) == _samplesSubscribe.end())
 				{
+					InterlockedExchange(&gSampleID, shapeInfo[i].id);
+
 					shared_ptr<SampleData> sampleData = make_shared<SampleData>();
 					sampleData->shapeInfo = make_shared<ShapeInfo>();
 					*sampleData->shapeInfo = shapeInfo[i];

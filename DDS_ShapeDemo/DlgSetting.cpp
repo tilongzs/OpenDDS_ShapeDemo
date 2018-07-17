@@ -70,18 +70,7 @@ void CDlgSetting::OnBnClickedOk()
 {
 	CString shapeType;
 	_comboShapeType.GetLBText(_comboShapeType.GetCurSel(), shapeType);
-	if (shapeType == L"三角形")
-	{
-		_shapeInfo->shapeType = "三角形";
-	}
-	else if (shapeType == L"四方形")
-	{
-		_shapeInfo->shapeType = CStringA("四方形");
-	}
-	else if (shapeType == L"圆形")
-	{
-		_shapeInfo->shapeType = "圆形";
-	}
+	_shapeInfo->shapeType = CStringA(shapeType);
 
 	CString color;
 	_comboColor.GetLBText(_comboColor.GetCurSel(), color);
