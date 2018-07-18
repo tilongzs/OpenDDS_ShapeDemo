@@ -338,11 +338,9 @@ void CDDS_ShapeDemoDlg::OnBtnPublish()
 				return;
 			}
 
+			// QoS设定
 			DataWriterQos dataWriterQos;
 			publisher->get_default_datawriter_qos(dataWriterQos);
-			dataWriterQos.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
-			DDS::Duration_t livelinessTime = { 1, 0 };
-			dataWriterQos.liveliness.lease_duration = livelinessTime;
 			dataWriterQos.history.kind = KEEP_LAST_HISTORY_QOS;
 			dataWriterQos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
 
@@ -497,19 +495,18 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 				return;
 			}
 
+			// QoS设定
 			DataReaderQos dataReaderQos;
 			subscriber->get_default_datareader_qos(dataReaderQos);
-			dataReaderQos.liveliness.kind = AUTOMATIC_LIVELINESS_QOS;
-			DDS::Duration_t livelinessTime = { 1, 0 };
-			dataReaderQos.liveliness.lease_duration = livelinessTime;
 			dataReaderQos.history.kind = KEEP_LAST_HISTORY_QOS;
 			dataReaderQos.durability.kind = TRANSIENT_LOCAL_DURABILITY_QOS;
 
 			// 创建读监听器
 			CDataReaderListenerImpl* dataReaderListener = new CDataReaderListenerImpl();
 			dataReaderListener->Init(this, gTaskIndex);
+			DDS::DataReaderListener_var listener(dataReaderListener);
 
-			// 创建过滤规则
+			// 创建订阅过滤规则
 			CStringA strFilter;
 			if (shapeInfo->color == -1)
 			{
@@ -532,7 +529,7 @@ void CDDS_ShapeDemoDlg::OnBtnSubscribe()
 
 			DDS::DataReader_var reader = subscriber->create_datareader(cft,
 				dataReaderQos,
-				dataReaderListener,
+				listener,
 				OpenDDS::DCPS::DEFAULT_STATUS_MASK);
 
 			if (!reader)
